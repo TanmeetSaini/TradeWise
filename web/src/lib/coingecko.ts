@@ -12,7 +12,7 @@ export type Coin = {
   sparkline_in_7d?: { price: number[] };
 };
 
-const MARKETS_URL =
+export const MARKETS_URL =
   "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&price_change_percentage=24h&sparkline=true";
 
 export async function getTopCoins(): Promise<Coin[]> {
