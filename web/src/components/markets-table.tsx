@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { MARKETS_URL, type Coin } from "@/lib/coingecko";
 import Sparkline from "@/components/sparkline";
 
@@ -42,12 +43,34 @@ function ChangeCell({ value }: { value: number | null }) {
     colorClass = "bg-down/10 text-down";
     arrow = "▼";
   }
-
   return (
     <span className={`inline-block rounded px-1.5 py-0.5 font-medium ${colorClass}`}>
       {arrow} {Math.abs(value).toFixed(2)}%
     </span>
   );
+}
+
+// bullish if the price is above its 7 day average, bearish if below
+function OutlookCell({ prices, currentPrice }: { prices: number[]; currentPrice: number }) {
+  if (prices.length === 0) {
+    return <span className="text-muted">—</span>;
+  }
+  let total = 0;
+  for (let i = 0; i < prices.length; i++) {
+    total += prices[i];
+  }
+  const average = total / prices.length;
+  let label: string;
+  let colorClass: string;
+  if (currentPrice >= average) {
+    label = "Bullish";
+    colorClass = "text-up";
+  } else {
+    label = "Bearish";
+    colorClass = "text-down";
+  }
+
+  return <span className={`font-medium ${colorClass}`}>{label}</span>;
 }
 
 export default function MarketsTable({ initialCoins }: { initialCoins: Coin[] }) {
@@ -69,9 +92,10 @@ export default function MarketsTable({ initialCoins }: { initialCoins: Coin[] })
         <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
           <tr>
             <th className="py-3 pr-4 font-medium">Rank</th>
-            <th className="py-3 pr-4 font-medium">Asset</th>
+            <th className="py-3 pr-4 font-medium">Cryptocurrency</th>
             <th className="py-3 pr-4 text-right font-medium">Price</th>
             <th className="py-3 pr-4 text-right font-medium">24h</th>
+            <th className="py-3 pr-4 font-medium">Outlook</th>
             <th className="hidden py-3 pr-4 font-medium md:table-cell">7D</th>
             <th className="hidden py-3 pr-4 text-right font-medium sm:table-cell">
               Market Cap
@@ -86,13 +110,21 @@ export default function MarketsTable({ initialCoins }: { initialCoins: Coin[] })
             <tr key={coin.id} className="transition-colors hover:bg-surface">
               <td className="py-3 pr-4 text-muted">{coin.market_cap_rank}</td>
               <td className="py-3 pr-4 font-medium">
-                {coin.name} ({coin.symbol.toUpperCase()})
+                <Link href={`/coin/${coin.id}`} className="hover:underline">
+                  {coin.name} ({coin.symbol.toUpperCase()})
+                </Link>
               </td>
               <td className="py-3 pr-4 text-right tabular-nums">
                 {formatPrice(coin.current_price)}
               </td>
               <td className="py-3 pr-4 text-right tabular-nums">
                 <ChangeCell value={coin.price_change_percentage_24h} />
+              </td>
+              <td className="py-3 pr-4">
+                <OutlookCell
+                  prices={coin.sparkline_in_7d?.price ?? []}
+                  currentPrice={coin.current_price}
+                />
               </td>
               <td className="hidden py-3 pr-4 md:table-cell">
                 <Sparkline data={coin.sparkline_in_7d?.price ?? []} />
