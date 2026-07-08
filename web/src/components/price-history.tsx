@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { getCoinOHLC, type Candle } from "@/lib/coingecko";
 import CandlestickChart from "@/components/candlestick-chart";
@@ -11,16 +10,29 @@ const ranges = [
   { label: "1Y", days: 365 },
 ];
 
-export default function CoinChart({ id, initialCandles }: { id: string; initialCandles: Candle[] }) {
+export default function PriceHistory({ id, initialCandles }: { id: string; initialCandles: Candle[] }) {
   const [days, setDays] = useState(30);
   const [candles, setCandles] = useState(initialCandles);
 
   async function changeRange(newDays: number) {
     setDays(newDays);
-    const data = await getCoinOHLC(id, newDays);
-    setCandles(data);
+    try {
+      const data = await getCoinOHLC(id, newDays);
+      setCandles(data);
+    } catch {
+      setCandles([]);
+    }
   }
-
+  let chart;
+  if (candles.length > 0) {
+    chart = <CandlestickChart candles={candles} />;
+  } else {
+    chart = (
+      <div className="flex h-[300px] items-center justify-center rounded border border-border text-sm text-muted">
+        Chart unavailable right now — try again in a moment.
+      </div>
+    );
+  }
   return (
     <div>
       <div className="mb-4 flex gap-2">
@@ -40,7 +52,7 @@ export default function CoinChart({ id, initialCandles }: { id: string; initialC
           );
         })}
       </div>
-      <CandlestickChart candles={candles} />
+      {chart}
     </div>
   );
 }
