@@ -1,10 +1,17 @@
 import Link from "next/link";
-import { getCoinOHLC } from "@/lib/coingecko";
-import CoinChart from "@/components/coin-chart";
+import { getCoinOHLC, type Candle } from "@/lib/coingecko";
+import PriceHistory from "@/components/price-history";
 
 export default async function CoinPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const candles = await getCoinOHLC(id, 30);
+
+  // if coingecko rate-limits, still render the page without the chart
+  let candles: Candle[] = [];
+  try {
+    candles = await getCoinOHLC(id, 30);
+  } catch {
+    candles = [];
+  }
 
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-12">
@@ -13,7 +20,7 @@ export default async function CoinPage({ params }: { params: Promise<{ id: strin
       </Link>
       <h1 className="mt-4 text-2xl font-semibold capitalize tracking-tight">{id}</h1>
       <div className="mt-8">
-        <CoinChart id={id} initialCandles={candles} />
+        <PriceHistory id={id} initialCandles={candles} />
       </div>
       <p className="mt-3 text-xs text-muted">
         Charts by{" "}
