@@ -18,7 +18,7 @@ function formatPrice(value: number) {
   }).format(value);
 }
 
-function formatCompact(value: number) {
+function formatLargeNums(value: number) {
   const billion = 1000000000;
   const million = 1000000;
   if (value >= billion) {
@@ -30,7 +30,7 @@ function formatCompact(value: number) {
   return value.toString();
 }
 
-function ChangeCell({ value }: { value: number | null }) {
+function PriceChange({ value }: { value: number | null }) {
   if (value === null) {
     return <span className="text-muted">—</span>;
   }
@@ -51,10 +51,7 @@ function ChangeCell({ value }: { value: number | null }) {
 }
 
 // bullish if the price is above its 7 day average, bearish if below
-function OutlookCell({ prices, currentPrice }: { prices: number[]; currentPrice: number }) {
-  if (prices.length === 0) {
-    return <span className="text-muted">—</span>;
-  }
+function OutlookLabel({ prices, currentPrice }: { prices: number[]; currentPrice: number }) {
   let total = 0;
   for (let i = 0; i < prices.length; i++) {
     total += prices[i];
@@ -75,7 +72,6 @@ function OutlookCell({ prices, currentPrice }: { prices: number[]; currentPrice:
 
 export default function MarketsTable({ initialCoins }: { initialCoins: Coin[] }) {
   const [coins, setCoins] = useState(initialCoins);
-
   // refetch the prices every 30 seconds so the table stays up to date
   useEffect(() => {
     const timer = setInterval(async () => {
@@ -118,22 +114,22 @@ export default function MarketsTable({ initialCoins }: { initialCoins: Coin[] })
                 {formatPrice(coin.current_price)}
               </td>
               <td className="py-3 pr-4 text-right tabular-nums">
-                <ChangeCell value={coin.price_change_percentage_24h} />
+                <PriceChange value={coin.price_change_percentage_24h} />
               </td>
               <td className="py-3 pr-4">
-                <OutlookCell
-                  prices={coin.sparkline_in_7d?.price ?? []}
+                <OutlookLabel
+                  prices={coin.sparkline_in_7d.price}
                   currentPrice={coin.current_price}
                 />
               </td>
               <td className="hidden py-3 pr-4 md:table-cell">
-                <Sparkline data={coin.sparkline_in_7d?.price ?? []} />
+                <Sparkline data={coin.sparkline_in_7d.price} />
               </td>
               <td className="hidden py-3 pr-4 text-right tabular-nums text-muted sm:table-cell">
-                ${formatCompact(coin.market_cap)}
+                ${formatLargeNums(coin.market_cap)}
               </td>
               <td className="hidden py-3 text-right tabular-nums text-muted sm:table-cell">
-                ${formatCompact(coin.total_volume)}
+                ${formatLargeNums(coin.total_volume)}
               </td>
             </tr>
           ))}
