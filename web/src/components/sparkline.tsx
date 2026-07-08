@@ -1,4 +1,4 @@
-// small line chart of the 7 day price data
+// small 7 day price line chart
 export default function Sparkline({ data }: { data: number[] }) {
   const width = 120;
   const height = 32;
@@ -10,7 +10,7 @@ export default function Sparkline({ data }: { data: number[] }) {
     range = 1;
   }
 
-  // get the x,y point for each price (y is flipped so a higher price sits higher)
+  // turn each price into an x,y point (y is flipped so higher prices sit higher)
   const points = data.map((price, i) => {
     const x = (i / (data.length - 1)) * width;
     const y = height - ((price - min) / range) * height;
@@ -18,7 +18,7 @@ export default function Sparkline({ data }: { data: number[] }) {
   });
 
   const line = points.join(" ");
-  // add the bottom corners so we can shade under the line
+  // add bottom corners so we can shade under the line
   const area = `0,${height} ${line} ${width},${height}`;
   let colorClass: string;
   if (data[data.length - 1] >= data[0]) {
