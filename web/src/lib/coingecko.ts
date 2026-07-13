@@ -21,9 +21,10 @@ if (apiKey) {
   headers["x-cg-demo-api-key"] = apiKey;
 }
 
-// get the top 50 coins for the markets table
-export async function getTopCoins(): Promise<Coin[]> {
-  const response = await fetch(MARKETS_URL, { headers, next: { revalidate: 60 } });
+// get the top coins by market cap (defaults to 50 with sparklines for the markets table)
+export async function getTopCoins(perPage = 50, sparkline = true): Promise<Coin[]> {
+  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${perPage}&page=1&price_change_percentage=24h&sparkline=${sparkline}`;
+  const response = await fetch(url, { headers, next: { revalidate: 60 } });
   if (!response.ok) {
     throw new Error(`CoinGecko request failed: ${response.status}`);
   }
