@@ -4,6 +4,7 @@ import { type Coin, type Candle } from "@/lib/coingecko";
 import PriceChart from "./price-chart";
 import CoinSearchList from "./coin-search-list";
 import Holdings from "./holdings";
+import { getHoldings, saveHolding, deleteHolding, getAccount, saveCash } from "./actions";
 
 // a coin we can buy and its price
 export type MarketCoin = {
@@ -42,6 +43,17 @@ export default function TradePage() {
     return () => clearInterval(timer);
   }, []);
 
+  // grab our saved cash and coins when the page opens
+  useEffect(() => {
+    async function loadAccount() {
+      const savedCash = await getAccount();
+      setCash(savedCash);
+      const savedHoldings = await getHoldings();
+      setHoldings(savedHoldings);
+    }
+    loadAccount();
+  }, []);
+
   const [selectedId, setSelectedId] = useState("");
   const [candles, setCandles] = useState<Candle[]>([]);
   const [days, setDays] = useState(30);
@@ -66,13 +78,14 @@ export default function TradePage() {
     loadCandles();
   }, [selectedId, days]);
 
-  function buy(coin: MarketCoin) {
+  async function buy(coin: MarketCoin) {
     const amountUsd = Number(amount);
     if (amountUsd <= 0 || cash < amountUsd) {
       return;
     }
     const quantity = amountUsd / coin.price;
-    setCash((c) => c - amountUsd);
+    const newCash = cash - amountUsd;
+    setCash(newCash);
 
     setHoldings((current) => {
       const updated: Holding[] = [];
@@ -97,9 +110,13 @@ export default function TradePage() {
       }
       return updated;
     });
+
+    // save it
+    await saveHolding(coin.id, coin.name, quantity, amountUsd);
+    await saveCash(newCash);
   }
 
-  function sellAll(holding: Holding) {
+  async function sellAll(holding: Holding) {
     // find the price of the coin we're selling
     let coin: MarketCoin | undefined;
     for (let i = 0; i < coins.length; i++) {
@@ -111,7 +128,8 @@ export default function TradePage() {
       return;
     }
     const proceeds = holding.quantity * coin.price;
-    setCash((c) => c + proceeds);
+    const newCash = cash + proceeds;
+    setCash(newCash);
 
     setHoldings((current) => {
       // keep everything except the one we sold
@@ -123,6 +141,10 @@ export default function TradePage() {
       }
       return updated;
     });
+
+    // save it
+    await deleteHolding(holding.id);
+    await saveCash(newCash);
   }
 
   // add up what all our holdings are worth
