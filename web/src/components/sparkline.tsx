@@ -3,19 +3,29 @@ export default function Sparkline({ data }: { data: number[] }) {
   const width = 120;
   const height = 32;
 
-  const min = Math.min(...data);
-  const max = Math.max(...data);
+  // find the lowest and highest price
+  let min = data[0];
+  let max = data[0];
+  for (let i = 0; i < data.length; i++) {
+    if (data[i] < min) {
+      min = data[i];
+    }
+    if (data[i] > max) {
+      max = data[i];
+    }
+  }
   let range = max - min;
   if (range === 0) {
     range = 1;
   }
 
   // turn each price into an x,y point (y is flipped so higher prices sit higher)
-  const points = data.map((price, i) => {
+  const points = [];
+  for (let i = 0; i < data.length; i++) {
     const x = (i / (data.length - 1)) * width;
-    const y = height - ((price - min) / range) * height;
-    return `${x},${y}`;
-  });
+    const y = height - ((data[i] - min) / range) * height;
+    points.push(`${x},${y}`);
+  }
 
   const line = points.join(" ");
   // add bottom corners so we can shade under the line
