@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { saveStrategy, getStrategies, deleteStrategy } from "./actions";
 
 // one row in the form
 type Rule = {
@@ -11,7 +12,7 @@ type Rule = {
   multiplier: string;
 };
 
-// a row turned into json for the tree
+// a row turned into json
 type RuleNode = {
   type: string;
   indicator: string;
@@ -28,11 +29,24 @@ type CoinOption = {
   name: string;
 };
 
+// one saved row from the database
+// strategy is one rule or a group of them
+type SavedStrategy = {
+  id: string;
+  name: string;
+  coin: string;
+  days: number;
+  strategy: any;
+};
+
 export default function BacktestPage() {
   const [coins, setCoins] = useState<CoinOption[]>([]);
   const [coin, setCoin] = useState("bitcoin");
   const [days, setDays] = useState(30);
   const [logic, setLogic] = useState("and");
+  const [name, setName] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [strategies, setStrategies] = useState<SavedStrategy[]>([]);
   const [rules, setRules] = useState<Rule[]>([
     { indicator: "price", period: "20", operator: ">", value: "60000", band: "lower", multiplier: "2" },
   ]);
@@ -51,6 +65,16 @@ export default function BacktestPage() {
     loadCoins();
   }, []);
 
+  // grab the saved strategies
+  async function loadStrategies() {
+    const saved = await getStrategies();
+    setStrategies(saved);
+  }
+  // load them once when the page opens
+  useEffect(() => {
+    loadStrategies();
+  }, []);
+
   // add a new row
   function addRule() {
     const blank = { indicator: "price", period: "20", operator: ">", value: "60000", band: "lower", multiplier: "2" };
@@ -62,7 +86,7 @@ export default function BacktestPage() {
     setRules(updated);
   }
 
-  // change one field of a row when the user edits it
+  // update one field when a row changes
   function updateRule(index: number, key: string, newValue: string) {
     const updated: Rule[] = [];
     for (let i = 0; i < rules.length; i++) {
@@ -71,7 +95,7 @@ export default function BacktestPage() {
         const row = { ...rules[i] };
         if (key === "indicator") {
           row.indicator = newValue;
-          // rsi is 0-100, the price based ones use a dollar value
+          // set a default value for the new indicator
           if (newValue === "rsi") {
             row.value = "30";
           } else {
@@ -96,7 +120,7 @@ export default function BacktestPage() {
     setRules(updated);
   }
 
-  // remove the row at this index
+  // drop this row
   function removeRule(index: number) {
     const updated: Rule[] = [];
     for (let i = 0; i < rules.length; i++) {
@@ -117,13 +141,13 @@ export default function BacktestPage() {
       operator: rule.operator,
     };
     if (rule.indicator === "bollinger") {
-      // bollinger checks a band, not a plain number
+      // fill in the bollinger fields
       node.period = Number(rule.period);
       node.band = rule.band;
       node.multiplier = Number(rule.multiplier);
     } else {
       node.value = Number(rule.value);
-      // indicators need a period, price doesn't
+      // add a period unless it's price
       if (rule.indicator !== "price") {
         node.period = Number(rule.period);
       }
@@ -131,20 +155,79 @@ export default function BacktestPage() {
     nodes.push(node);
   }
 
-  // single node, or wrap them with and/or
-  let strategy;
+  // wrap in a group if there's more than one rule
+  let strategy: any;
   if (nodes.length === 1) {
     strategy = nodes[0];
   } else {
     strategy = { type: logic, rules: nodes };
   }
 
-  // this gets sent to the backend later
+  // what we'll send to run the test
   const request = { coin, days, strategy };
-
-  // the engine isnt built yet so just log the request for now
+  // just log it for now
   function runBacktest() {
     console.log(request);
+  }
+
+  // save the strategy
+  async function saveThisStrategy() {
+    // need a name to save
+    if (name === "") {
+      return;
+    }
+    const result = await saveStrategy(name, coin, days, strategy);
+    if (result) {
+      setSaved(true);
+      setName("");
+      // refresh so the new one shows up
+      loadStrategies();
+    }
+  }
+
+  // load a saved one back into the form
+  function loadStrategy(item: SavedStrategy) {
+    setCoin(item.coin);
+    setDays(item.days);
+
+    const saved = item.strategy;
+
+    // a group has a rules array, a single rule doesn't
+    let savedNodes;
+    if (saved.rules) {
+      setLogic(saved.type);
+      savedNodes = saved.rules;
+    } else {
+      savedNodes = [saved];
+    }
+
+    // turn each node back into a form row
+    const newRules: Rule[] = [];
+    for (let i = 0; i < savedNodes.length; i++) {
+      const node = savedNodes[i];
+      // start blank then fill it in
+      const row: Rule = { indicator: "price", period: "20", operator: ">", value: "60000", band: "lower", multiplier: "2" };
+      row.indicator = node.indicator;
+      row.operator = node.operator;
+      if (node.indicator === "bollinger") {
+        row.period = String(node.period);
+        row.band = String(node.band);
+        row.multiplier = String(node.multiplier);
+      } else {
+        row.value = String(node.value);
+        if (node.indicator !== "price") {
+          row.period = String(node.period);
+        }
+      }
+      newRules.push(row);
+    }
+    setRules(newRules);
+  }
+
+  // delete one then refresh the list
+  async function removeStrategy(id: string) {
+    await deleteStrategy(id);
+    loadStrategies();
   }
 
   return (
@@ -194,7 +277,7 @@ export default function BacktestPage() {
               </select>
             )}
             <div className="flex items-center gap-2 text-sm">
-              {/* bollinger reads "Price is above Lower Bollinger Band over 20 days, 2 multiplier" */}
+              {/* the bollinger version of the row */}
               {rule.indicator === "bollinger" && (
                 <div className="flex items-center gap-2">
                   <span className="text-muted">Price</span>
@@ -249,7 +332,7 @@ export default function BacktestPage() {
                 </div>
               )}
 
-              {/* every other indicator reads "SMA over 20 days is above $60000" */}
+              {/* the normal version of the row */}
               {rule.indicator !== "bollinger" && (
                 <div className="flex items-center gap-2">
                   <select
@@ -286,7 +369,7 @@ export default function BacktestPage() {
                     <option value="<">is below</option>
                   </select>
 
-                  {/* rsi is a 0-100 level, the others are a dollar price */}
+                  {/* rsi is a 0-100 level, others are a dollar price */}
                   {rule.indicator !== "rsi" && <span className="text-muted">$</span>}
                   <input
                     type="number"
@@ -317,14 +400,61 @@ export default function BacktestPage() {
         + Add rule
       </button>
 
-      <div className="mt-8">
+      <div className="mt-8 flex items-center gap-2">
         <button
           onClick={runBacktest}
           className="rounded border border-border bg-surface px-4 py-2 text-sm transition-colors hover:border-foreground"
         >
           Run backtest
         </button>
+
+        <input
+          type="text"
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+            setSaved(false);
+          }}
+          placeholder="Strategy name"
+          className="rounded border border-border bg-surface px-3 py-2 text-sm"
+        />
+        <button
+          onClick={saveThisStrategy}
+          className="rounded border border-border bg-surface px-4 py-2 text-sm transition-colors hover:border-foreground"
+        >
+          Save
+        </button>
+        {saved && <span className="text-sm text-muted">Saved</span>}
       </div>
+
+      {strategies.length > 0 && (
+        <div className="mt-12">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted">
+            Saved strategies
+          </h2>
+          <div className="mt-4 space-y-2">
+            {strategies.map((item) => (
+              <div key={item.id} className="flex items-center gap-3 text-sm">
+                <span>
+                  {item.name} ({item.coin}, {item.days} days)
+                </span>
+                <button
+                  onClick={() => loadStrategy(item)}
+                  className="text-muted transition-colors hover:text-foreground"
+                >
+                  load
+                </button>
+                <button
+                  onClick={() => removeStrategy(item.id)}
+                  className="text-muted transition-colors hover:text-foreground"
+                >
+                  remove
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
