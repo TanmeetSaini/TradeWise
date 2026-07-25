@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { getCoinOHLC, type Candle } from "@/lib/coingecko";
+import { type Candle } from "@/lib/coingecko";
 import CandlestickChart from "@/components/candlestick-chart";
 
 const ranges = [
@@ -17,7 +17,8 @@ export default function PriceHistory({ id, initialCandles }: { id: string; initi
   async function changeRange(newDays: number) {
     setDays(newDays);
     try {
-      const data = await getCoinOHLC(id, newDays);
+      const res = await fetch(`/api/ohlc?id=${id}&days=${newDays}`);
+      const data: Candle[] = await res.json();
       setCandles(data);
     } catch {
       setCandles([]);
