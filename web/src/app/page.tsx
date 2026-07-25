@@ -7,11 +7,11 @@ const features = [
   },
   {
     title: "Test",
-    body: "Run the strategy against years of real market data to see how it would have performed, including fees and slippage.",
+    body: "Run the strategy against up to a year of real daily prices to see how it would have performed, including trading fees and slippage.",
   },
   {
-    title: "Optimize",
-    body: "Try many combinations of a strategy's settings to find the ones that perform best on past data.",
+    title: "Trade",
+    body: "Buy and sell at live prices on a simulated $10,000 account, and track what you own from the portfolio page.",
   },
 ];
 
