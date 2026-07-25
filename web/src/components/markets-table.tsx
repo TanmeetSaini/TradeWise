@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { MARKETS_URL, type Coin } from "@/lib/coingecko";
+import { type Coin } from "@/lib/coingecko";
 import Sparkline from "@/components/sparkline";
 
 function formatPrice(value: number) {
@@ -50,7 +50,7 @@ function PriceChange({ value }: { value: number | null }) {
   );
 }
 
-// bullish if the price is above its 7 day average, bearish if below
+// bullish if price is above its 7 day average, bearish if below
 function OutlookLabel({ prices, currentPrice }: { prices: number[]; currentPrice: number }) {
   let total = 0;
   for (let i = 0; i < prices.length; i++) {
@@ -72,10 +72,10 @@ function OutlookLabel({ prices, currentPrice }: { prices: number[]; currentPrice
 
 export default function MarketsTable({ initialCoins }: { initialCoins: Coin[] }) {
   const [coins, setCoins] = useState(initialCoins);
-  // refetch the prices every 30 seconds so the table stays up to date
+  // refetch every 30 seconds so the table stays fresh
   useEffect(() => {
     const timer = setInterval(async () => {
-      const res = await fetch(MARKETS_URL, { cache: "no-store" });
+      const res = await fetch("/api/markets?perPage=50&sparkline=true", { cache: "no-store" });
       const fresh: Coin[] = await res.json();
       setCoins(fresh);
     }, 30000);
