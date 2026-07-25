@@ -29,8 +29,16 @@ type CoinOption = {
   name: string;
 };
 
-// one saved row from the database
-// strategy is one rule or a group of them
+// what the engine sends back
+type BacktestResult = {
+  final_value: number;
+  return_pct: number;
+  trades: number;
+  hold_value: number;
+  hold_return_pct: number;
+};
+
+// one saved row from the db, strategy is one rule or a group
 type SavedStrategy = {
   id: string;
   name: string;
@@ -47,11 +55,12 @@ export default function BacktestPage() {
   const [name, setName] = useState("");
   const [saved, setSaved] = useState(false);
   const [strategies, setStrategies] = useState<SavedStrategy[]>([]);
+  const [result, setResult] = useState<BacktestResult | null>(null);
   const [rules, setRules] = useState<Rule[]>([
     { indicator: "price", period: "20", operator: ">", value: "60000", band: "lower", multiplier: "2" },
   ]);
 
-  // load the coins once when the page opens
+  // load coins once when page opens
   useEffect(() => {
     async function loadCoins() {
       const res = await fetch("/api/markets");
@@ -65,17 +74,14 @@ export default function BacktestPage() {
     loadCoins();
   }, []);
 
-  // grab the saved strategies
   async function loadStrategies() {
     const saved = await getStrategies();
     setStrategies(saved);
   }
-  // load them once when the page opens
   useEffect(() => {
     loadStrategies();
   }, []);
 
-  // add a new row
   function addRule() {
     const blank = { indicator: "price", period: "20", operator: ">", value: "60000", band: "lower", multiplier: "2" };
     const updated = [];
@@ -86,16 +92,14 @@ export default function BacktestPage() {
     setRules(updated);
   }
 
-  // update one field when a row changes
   function updateRule(index: number, key: string, newValue: string) {
     const updated: Rule[] = [];
     for (let i = 0; i < rules.length; i++) {
       if (i === index) {
-        // copy the row before changing it
         const row = { ...rules[i] };
         if (key === "indicator") {
           row.indicator = newValue;
-          // set a default value for the new indicator
+          // default value for the new indicator
           if (newValue === "rsi") {
             row.value = "30";
           } else {
@@ -120,7 +124,6 @@ export default function BacktestPage() {
     setRules(updated);
   }
 
-  // drop this row
   function removeRule(index: number) {
     const updated: Rule[] = [];
     for (let i = 0; i < rules.length; i++) {
@@ -131,7 +134,7 @@ export default function BacktestPage() {
     setRules(updated);
   }
 
-  // build the nodes from the rows
+  // build nodes from the rows
   const nodes: RuleNode[] = [];
   for (let i = 0; i < rules.length; i++) {
     const rule = rules[i];
@@ -141,7 +144,7 @@ export default function BacktestPage() {
       operator: rule.operator,
     };
     if (rule.indicator === "bollinger") {
-      // fill in the bollinger fields
+      // bollinger fields
       node.period = Number(rule.period);
       node.band = rule.band;
       node.multiplier = Number(rule.multiplier);
@@ -155,7 +158,7 @@ export default function BacktestPage() {
     nodes.push(node);
   }
 
-  // wrap in a group if there's more than one rule
+  // wrap in a group if more than one rule
   let strategy: any;
   if (nodes.length === 1) {
     strategy = nodes[0];
@@ -163,14 +166,19 @@ export default function BacktestPage() {
     strategy = { type: logic, rules: nodes };
   }
 
-  // what we'll send to run the test
-  const request = { coin, days, strategy };
-  // just log it for now
-  function runBacktest() {
-    console.log(request);
+  async function runBacktest() {
+    const res = await fetch(`/api/prices?id=${coin}&days=${days}`);
+    const prices = await res.json();
+    // send prices and strategy to engine
+    const engineRes = await fetch("http://localhost:8000/backtest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prices: prices, strategy: strategy }),
+    });
+    const data = await engineRes.json();
+    setResult(data);
   }
 
-  // save the strategy
   async function saveThisStrategy() {
     // need a name to save
     if (name === "") {
@@ -180,12 +188,11 @@ export default function BacktestPage() {
     if (result) {
       setSaved(true);
       setName("");
-      // refresh so the new one shows up
+      // refresh so new one shows up
       loadStrategies();
     }
   }
 
-  // load a saved one back into the form
   function loadStrategy(item: SavedStrategy) {
     setCoin(item.coin);
     setDays(item.days);
@@ -201,7 +208,7 @@ export default function BacktestPage() {
       savedNodes = [saved];
     }
 
-    // turn each node back into a form row
+    // turn each node back into a row
     const newRules: Rule[] = [];
     for (let i = 0; i < savedNodes.length; i++) {
       const node = savedNodes[i];
@@ -426,6 +433,35 @@ export default function BacktestPage() {
         </button>
         {saved && <span className="text-sm text-muted">Saved</span>}
       </div>
+
+      {result && (
+        <div className="mt-6">
+          <p className="text-2xl font-semibold tabular-nums">${result.final_value.toFixed(2)}</p>
+          <p className="mt-1 text-sm text-muted">
+            Return{" "}
+            <span className={result.return_pct >= 0 ? "text-up" : "text-down"}>
+              {result.return_pct >= 0 ? "+" : ""}
+              {result.return_pct.toFixed(2)}%
+            </span>{" "}
+            on a $10,000 start
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            {result.trades} trades, after 0.1% fees and 0.05% slippage
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            Buy and hold would have returned{" "}
+            <span className={result.hold_return_pct >= 0 ? "text-up" : "text-down"}>
+              {result.hold_return_pct >= 0 ? "+" : ""}
+              {result.hold_return_pct.toFixed(2)}%
+            </span>
+          </p>
+          <p className="mt-2 text-sm">
+            {result.return_pct >= result.hold_return_pct
+              ? "This strategy beat buy and hold"
+              : "This strategy did not beat buy and hold"}
+          </p>
+        </div>
+      )}
 
       {strategies.length > 0 && (
         <div className="mt-12">
