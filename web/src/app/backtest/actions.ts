@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 
-// save a strategy
 export async function saveStrategy(
   name: string,
   coin: string,
@@ -11,7 +10,6 @@ export async function saveStrategy(
 ) {
   const supabase = await createClient();
 
-  // add the new strategy row
   const { error } = await supabase.from("strategies").insert({
     name: name,
     coin: coin,
@@ -25,7 +23,7 @@ export async function saveStrategy(
   return true;
 }
 
-// get the saved strategies
+// newest first so the list on the page reads top down
 export async function getStrategies() {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -39,7 +37,6 @@ export async function getStrategies() {
   return data;
 }
 
-// delete a strategy by id
 export async function deleteStrategy(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("strategies").delete().eq("id", id);
