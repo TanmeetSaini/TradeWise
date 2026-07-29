@@ -30,7 +30,7 @@ export default function PriceHistory({ id, initialCandles }: { id: string; initi
   } else {
     chart = (
       <div className="flex h-[300px] items-center justify-center rounded border border-border text-sm text-muted">
-        Chart unavailable right now — try again in a moment.
+        Chart unavailable right now - try again in a moment.
       </div>
     );
   }
