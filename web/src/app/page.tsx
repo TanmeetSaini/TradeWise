@@ -20,14 +20,10 @@ export default function Home() {
     <main className="mx-auto w-full max-w-7xl flex-1 px-6">
       <section className="pt-12 pb-14 sm:pt-16">
         <h1 className="max-w-2xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          Build and test crypto trading strategies.
+          Most trading strategies lose to just holding.
         </h1>
         <p className="mt-6 max-w-xl text-lg text-muted">
-          TradeWise is a project for building and testing crypto trading
-          strategies. You can build a strategy from simple rules and test it
-          against real market data to see how it would have performed, or trade
-          manually at live prices yourself. Everything runs on a simulated
-          portfolio, so no real money is involved.
+          This is a way to find out if yours is one of them.
         </p>
         <div className="mt-8">
           <Link
