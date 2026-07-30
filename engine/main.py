@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -8,10 +9,14 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-# let the next.js dev server call us
+allowed = ["http://localhost:3000"]
+site = os.environ.get("SITE_URL")
+if site:
+    allowed.append(site)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -36,6 +41,5 @@ def backtest(req: BacktestRequest):
         capture_output=True,
         text=True,
     )
-    # it prints the result back as json on stdout
     result = json.loads(proc.stdout)
     return result
