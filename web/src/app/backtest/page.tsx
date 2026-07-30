@@ -169,8 +169,9 @@ export default function BacktestPage() {
   async function runBacktest() {
     const res = await fetch(`/api/prices?id=${coin}&days=${days}`);
     const prices = await res.json();
+    const engineUrl = process.env.NEXT_PUBLIC_ENGINE_URL || "http://localhost:8000";
     // send prices and strategy to engine
-    const engineRes = await fetch("http://localhost:8000/backtest", {
+    const engineRes = await fetch(`${engineUrl}/backtest`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prices: prices, strategy: strategy }),
