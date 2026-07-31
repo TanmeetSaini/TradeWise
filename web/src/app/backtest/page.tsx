@@ -54,6 +54,7 @@ export default function BacktestPage() {
   const [logic, setLogic] = useState("and");
   const [name, setName] = useState("");
   const [saved, setSaved] = useState(false);
+  const [running, setRunning] = useState(false);
   const [strategies, setStrategies] = useState<SavedStrategy[]>([]);
   const [result, setResult] = useState<BacktestResult | null>(null);
   const [rules, setRules] = useState<Rule[]>([
@@ -167,6 +168,7 @@ export default function BacktestPage() {
   }
 
   async function runBacktest() {
+    setRunning(true);
     const res = await fetch(`/api/prices?id=${coin}&days=${days}`);
     const prices = await res.json();
     const engineUrl = process.env.NEXT_PUBLIC_ENGINE_URL || "http://localhost:8000";
@@ -178,6 +180,7 @@ export default function BacktestPage() {
     });
     const data = await engineRes.json();
     setResult(data);
+    setRunning(false);
   }
 
   async function saveThisStrategy() {
@@ -200,7 +203,7 @@ export default function BacktestPage() {
 
     const saved = item.strategy;
 
-    // a group has a rules array, a single rule doesn't
+    // group has a rules array
     let savedNodes;
     if (saved.rules) {
       setLogic(saved.type);
@@ -434,6 +437,8 @@ export default function BacktestPage() {
         </button>
         {saved && <span className="text-sm text-muted">Saved</span>}
       </div>
+
+      {running && <p className="mt-3 text-sm text-muted">Running backtest...</p>}
 
       {result && (
         <div className="mt-6">
