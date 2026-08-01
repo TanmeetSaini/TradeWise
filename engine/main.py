@@ -2,8 +2,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
-
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -33,7 +32,7 @@ class BacktestRequest(BaseModel):
 
 @app.post("/backtest")
 def backtest(req: BacktestRequest):
-    # send the prices and strategy to the c++ program on stdin
+    # send the prices and strategy
     payload = json.dumps({"prices": req.prices, "strategy": req.strategy})
     proc = subprocess.run(
         [str(EVALUATOR)],
@@ -41,5 +40,7 @@ def backtest(req: BacktestRequest):
         capture_output=True,
         text=True,
     )
+    if proc.returncode != 0:
+        raise HTTPException(status_code=400, detail=proc.stderr.strip())
     result = json.loads(proc.stdout)
     return result
