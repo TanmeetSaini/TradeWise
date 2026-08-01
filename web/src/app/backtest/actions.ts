@@ -6,7 +6,7 @@ export async function saveStrategy(
   name: string,
   coin: string,
   days: number,
-  strategy: any
+  strategy: object
 ) {
   const supabase = await createClient();
 
