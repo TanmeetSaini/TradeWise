@@ -23,6 +23,12 @@ type RuleNode = {
   multiplier?: number;
 };
 
+// a few rules joined by and/or
+type RuleGroup = {
+  type: string;
+  rules: RuleNode[];
+};
+
 // a coin for the dropdown
 type CoinOption = {
   id: string;
@@ -44,7 +50,7 @@ type SavedStrategy = {
   name: string;
   coin: string;
   days: number;
-  strategy: any;
+  strategy: RuleNode | RuleGroup;
 };
 
 export default function BacktestPage() {
@@ -160,7 +166,7 @@ export default function BacktestPage() {
   }
 
   // wrap in a group if more than one rule
-  let strategy: any;
+  let strategy: RuleNode | RuleGroup;
   if (nodes.length === 1) {
     strategy = nodes[0];
   } else {
@@ -169,17 +175,24 @@ export default function BacktestPage() {
 
   async function runBacktest() {
     setRunning(true);
-    const res = await fetch(`/api/prices?id=${coin}&days=${days}`);
-    const prices = await res.json();
-    const engineUrl = process.env.NEXT_PUBLIC_ENGINE_URL || "http://localhost:8000";
-    // send prices and strategy to engine
-    const engineRes = await fetch(`${engineUrl}/backtest`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prices: prices, strategy: strategy }),
-    });
-    const data = await engineRes.json();
-    setResult(data);
+    try {
+      const res = await fetch(`/api/prices?id=${coin}&days=${days}`);
+      const prices = await res.json();
+      const engineUrl = process.env.NEXT_PUBLIC_ENGINE_URL || "http://localhost:8000";
+      // send prices and strategy to engine
+      const engineRes = await fetch(`${engineUrl}/backtest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prices: prices, strategy: strategy }),
+      });
+      if (!engineRes.ok) {
+        throw new Error("engine failed");
+      }
+      const data = await engineRes.json();
+      setResult(data);
+    } catch {
+      setResult(null);
+    }
     setRunning(false);
   }
 
@@ -203,9 +216,9 @@ export default function BacktestPage() {
 
     const saved = item.strategy;
 
-    // group has a rules array
-    let savedNodes;
-    if (saved.rules) {
+    // group has rules array
+    let savedNodes: RuleNode[];
+    if ("rules" in saved) {
       setLogic(saved.type);
       savedNodes = saved.rules;
     } else {
