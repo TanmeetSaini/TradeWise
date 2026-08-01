@@ -15,7 +15,7 @@ export default function CandlestickChart({ candles }: { candles: Candle[] }) {
       autoSize: true,
       layout: {
         background: { color: "transparent" },
-        textColor: "#90887a",
+        textColor: "#978A84",
         attributionLogo: false,
       },
       grid: {
