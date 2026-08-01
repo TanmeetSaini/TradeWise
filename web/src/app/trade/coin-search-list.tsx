@@ -16,7 +16,7 @@ export default function CoinSearchList({
   const [search, setSearch] = useState("");
 
   // figure out which coins to show in the list
-  let shown: MarketCoin[] = [];
+  const shown: MarketCoin[] = [];
   if (search === "") {
     // nothing typed yet, so just show the first 5 coins
     for (let i = 0; i < coins.length && i < 5; i++) {
