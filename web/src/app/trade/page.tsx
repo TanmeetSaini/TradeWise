@@ -58,25 +58,24 @@ export default function TradePage() {
   const [candles, setCandles] = useState<Candle[]>([]);
   const [days, setDays] = useState(30);
 
-  // show the first coin's chart at the start
-  useEffect(() => {
-    if (selectedId === "" && coins.length > 0) {
-      setSelectedId(coins[0].id);
-    }
-  }, [coins, selectedId]);
+  // nothing picked, show first coins chart
+  let shownId = selectedId;
+  if (shownId === "" && coins.length > 0) {
+    shownId = coins[0].id;
+  }
 
   // load the chart when the coin changes
   useEffect(() => {
-    if (selectedId === "") {
+    if (shownId === "") {
       return;
     }
     async function loadCandles() {
-      const res = await fetch(`/api/ohlc?id=${selectedId}&days=${days}`);
+      const res = await fetch(`/api/ohlc?id=${shownId}&days=${days}`);
       const data: Candle[] = await res.json();
       setCandles(data);
     }
     loadCandles();
-  }, [selectedId, days]);
+  }, [shownId, days]);
 
   async function buy(coin: MarketCoin) {
     const amountUsd = Number(amount);
@@ -180,7 +179,7 @@ export default function TradePage() {
         />
       </div>
 
-      <CoinSearchList coins={coins} selectedId={selectedId} onSelect={setSelectedId} onBuy={buy} />
+      <CoinSearchList coins={coins} selectedId={shownId} onSelect={setSelectedId} onBuy={buy} />
 
       <Holdings holdings={holdings} coins={coins} onSell={sellAll} />
     </main>
