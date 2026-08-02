@@ -15,12 +15,12 @@ export default function CandlestickChart({ candles }: { candles: Candle[] }) {
       autoSize: true,
       layout: {
         background: { color: "transparent" },
-        textColor: "#978A84",
+        textColor: "#c1bbba",
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: "#2c261d" },
-        horzLines: { color: "#2c261d" },
+        vertLines: { color: "#333131" },
+        horzLines: { color: "#333131" },
       },
     });
 
