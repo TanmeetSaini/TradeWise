@@ -168,6 +168,17 @@ export default function TradePage() {
       </p>
 
       <PriceChart candles={candles} days={days} onChangeDays={setDays} />
+      <p className="mt-3 text-xs text-muted">
+        Charts by{" "}
+        <a
+          href="https://www.tradingview.com"
+          target="_blank"
+          rel="noreferrer"
+          className="hover:text-foreground"
+        >
+          TradingView
+        </a>
+      </p>
 
       <div className="mt-6 flex items-center gap-2 text-sm">
         <label className="text-muted">Buy amount $</label>
