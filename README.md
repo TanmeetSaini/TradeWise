@@ -32,6 +32,7 @@ lets users manually trade with live prices on a simulated portfolio.
 - **Data:** CoinGecko
 - **Authentication and database:** Supabase
 - **Charts:** lightweight-charts v5
+- **Deployment:** Vercel for the site, Render for the engine
 
 The backtest engine is written in C++. Each strategy is represented as a tree. The AND/OR
 groups contain child rules, and the tree is recursively evaluated for each day of
@@ -47,6 +48,9 @@ results more realistic.
 
 The pages don't call CoinGecko directly, they go through my own `/api` routes so the key
 stays on the server.
+
+The engine is on Render's free tier, so it sleeps after 15 minutes of no traffic. The
+first backtest after that can take around a minute while it starts back up.
 
 ## Project Structure
 
