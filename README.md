@@ -93,10 +93,10 @@ The same strategy against the engine directly:
 curl -X POST http://localhost:8000/backtest \
   -H "Content-Type: application/json" \
   -d '{
-    "prices": [61490, 62554, 63088, 63586, 64001, 63335, 62247, 63193, 64111, 63791,
-               63747, 62279, 64984, 64717, 63792, 63905, 64796, 64670, 65185, 66521,
-               66077, 65033, 64099, 64316, 65310, 63674, 63957, 63934, 64777, 62820,
-               63009],
+    "prices": [62554, 63088, 63586, 64001, 63335, 62247, 63193, 64111, 63791, 63747,
+               62279, 64984, 64717, 63792, 63905, 64796, 64670, 65185, 66521, 66077,
+               65033, 64099, 64316, 65310, 63674, 63957, 63934, 64777, 62897, 62773,
+               63180],
     "strategy": {
       "type": "and",
       "rules": [
@@ -109,14 +109,14 @@ curl -X POST http://localhost:8000/backtest \
 
 ```json
 {
-  "final_value": 9861.531019310552,
-  "return_pct": -1.3846898068944755,
+  "final_value": 9812.567185703807,
+  "return_pct": -1.874328142961931,
   "trades": 10,
-  "hold_value": 10231.66917110643,
-  "hold_return_pct": 2.3166917110643044
+  "hold_value": 10084.930997429316,
+  "hold_return_pct": 0.8493099742931554
 }
 ```
 
-Bitcoin rose 2.32% over those 30 days. The strategy traded 10 times and lost 1.38%, so it
+Bitcoin rose 0.85% over those 30 days. The strategy traded 10 times and lost 1.87%, so it
 would have been better to leave it alone. Results vary slightly between runs since the
 prices are fetched from live data.
