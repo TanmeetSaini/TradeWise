@@ -80,6 +80,18 @@ g++ -std=c++17 -o cpp/evaluator cpp/evaluator.cpp
 uvicorn main:app --port 8000
 ```
 
+## Tests
+
+The engine includes a small set of tests in `engine/test_engine.py`. Each test creates a
+small strategy and price series with a known expected result, runs the compiled C++
+engine, and checks that the output matches. The tests cover the AND/OR strategy tree,
+SMA behavior, indicators waiting for enough history, and next-day trade execution.
+
+```bash
+cd engine
+python test_engine.py
+```
+
 ## Example
 
 Hold Bitcoin while RSI over 5 days is under 70 and the price is above 64000, over 30 days
