@@ -3,7 +3,7 @@ import Link from "next/link";
 const features = [
   {
     title: "Build",
-    body: "Create a strategy from simple rules, like buying when RSI drops below 30 and the price is above its 50-day average.",
+    body: "Create a strategy from various rules, like buying when RSI drops below 30 and the price is above its 50-day average.",
   },
   {
     title: "Test",
