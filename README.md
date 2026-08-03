@@ -24,15 +24,7 @@ lets users manually trade with live prices on a simulated portfolio.
 - Candlestick charts on 7D, 30D, 90D and 1Y
 - Sign in to save strategies and keep your portfolio
 
-## Tech Stack
-
-- **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind v4
-- **Backtest engine:** C++17, nlohmann/json vendored as `engine/cpp/json.hpp`
-- **API:** FastAPI and uvicorn
-- **Data:** CoinGecko
-- **Authentication and database:** Supabase
-- **Charts:** lightweight-charts v5
-- **Deployment:** Vercel for the site, Render for the engine
+## Backtest Engine
 
 The backtest engine is written in C++. Each strategy is represented as a tree. The AND/OR
 groups contain child rules, and the tree is recursively evaluated for each day of
@@ -45,6 +37,16 @@ not have been known yet when the signal was generated, which made results look b
 than they should. I also added checks so indicators like a 50-day moving average do not
 run until enough historical data is available. These changes helped make the backtest
 results more realistic.
+
+## Tech Stack
+
+- **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind v4
+- **Backtest engine:** C++17, nlohmann/json vendored as `engine/cpp/json.hpp`
+- **API:** FastAPI and uvicorn
+- **Data:** CoinGecko
+- **Authentication and database:** Supabase
+- **Charts:** lightweight-charts v5
+- **Deployment:** Vercel for the site, Render for the engine
 
 The pages don't call CoinGecko directly, they go through my own `/api` routes so the key
 stays on the server.
@@ -98,8 +100,8 @@ python test_engine.py
 
 ## Example
 
-Hold Bitcoin while RSI over 5 days is under 70 and the price is above 64000, over 30 days
-of closes:
+Hold Bitcoin while the 5 day RSI is under 70 and the price is above 64000, tested on 30
+days of closes:
 
 ![Backtest page](docs/backtest.png)
 
