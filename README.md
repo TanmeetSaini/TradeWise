@@ -1,6 +1,6 @@
 # TradeWise
 
-https://tradewise-app.vercel.app
+**Live demo:** https://tradewise-app.vercel.app
 
 ## Overview
 
