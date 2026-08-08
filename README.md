@@ -10,7 +10,7 @@ come out of every trade, and the result is shown next to what you'd have got fro
 buying the coin and holding it. The project also includes a paper trading account that
 lets users manually trade with live prices on a simulated portfolio.
 
-![Markets page](docs/markets.png)
+<img align="top" src="docs/markets.png" alt="Markets page" width="49%"> <img align="top" src="docs/trade.png" alt="Trade page" width="49%">
 
 ## Features
 
