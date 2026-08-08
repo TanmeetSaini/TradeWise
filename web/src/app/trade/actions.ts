@@ -24,15 +24,11 @@ export async function getHoldings() {
   return list;
 }
 
-// buying, add to it if we already own it, else make a new row
 export async function saveHolding(coinId: string, name: string, quantity: number, cost: number) {
   const supabase = await createClient();
-
   // already own this coin?
   const { data } = await supabase.from("holdings").select().eq("coin_id", coinId);
-
   if (data && data.length > 0) {
-    // bump up what we have
     const row = data[0];
     await supabase
       .from("holdings")
@@ -52,13 +48,21 @@ export async function saveHolding(coinId: string, name: string, quantity: number
   }
 }
 
-// selling, just remove its row
+
+export async function updateHolding(coinId: string, quantity: number, cost: number) {
+  const supabase = await createClient();
+  await supabase
+    .from("holdings")
+    .update({ quantity: quantity, cost: cost })
+    .eq("coin_id", coinId);
+}
+
+
 export async function deleteHolding(coinId: string) {
   const supabase = await createClient();
   await supabase.from("holdings").delete().eq("coin_id", coinId);
 }
 
-// get their cash, or make an account if they don't have one yet
 export async function getAccount() {
   const supabase = await createClient();
   const { data } = await supabase.from("accounts").select();
@@ -67,12 +71,11 @@ export async function getAccount() {
     return Number(data[0].cash);
   }
 
-  // no account yet, start them with 10000
+  // no account yet, start with 10000
   await supabase.from("accounts").insert({ cash: 10000 });
   return 10000;
 }
 
-// save their cash
 export async function saveCash(cash: number) {
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
