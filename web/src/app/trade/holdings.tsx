@@ -12,7 +12,7 @@ export default function Holdings({
 }) {
   return (
     <>
-      <h2 className="mt-10 text-sm font-medium uppercase tracking-wide text-muted">Holdings</h2>
+      <h2 className="mt-6 text-sm font-medium uppercase tracking-wide text-muted">Holdings</h2>
       <div className="mt-3 space-y-2">
         {holdings.length === 0 && <p className="text-sm text-muted">Nothing yet.</p>}
         {holdings.map((holding) => {
