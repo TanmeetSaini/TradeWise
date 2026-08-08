@@ -4,7 +4,14 @@ import { type Coin, type Candle } from "@/lib/coingecko";
 import PriceChart from "./price-chart";
 import CoinSearchList from "./coin-search-list";
 import Holdings from "./holdings";
-import { getHoldings, saveHolding, deleteHolding, getAccount, saveCash } from "./actions";
+import {
+  getHoldings,
+  saveHolding,
+  updateHolding,
+  deleteHolding,
+  getAccount,
+  saveCash,
+} from "./actions";
 
 // a coin we can buy and its price
 export type MarketCoin = {
@@ -26,6 +33,7 @@ export default function TradePage() {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [coins, setCoins] = useState<MarketCoin[]>([]);
   const [amount, setAmount] = useState("100");
+  const [sellAmount, setSellAmount] = useState("100");
 
   // get prices from our api and refresh every 30 seconds
   useEffect(() => {
@@ -115,8 +123,11 @@ export default function TradePage() {
     await saveCash(newCash);
   }
 
-  async function sellAll(holding: Holding) {
-    // find the price of the coin we're selling
+  async function sell(holding: Holding) {
+    const amountUsd = Number(sellAmount);
+    if (amountUsd <= 0) {
+      return;
+    }
     let coin: MarketCoin | undefined;
     for (let i = 0; i < coins.length; i++) {
       if (coins[i].id === holding.id) {
@@ -126,23 +137,43 @@ export default function TradePage() {
     if (!coin) {
       return;
     }
-    const proceeds = holding.quantity * coin.price;
+
+    // cant sell more than we actually own
+    let quantity = amountUsd / coin.price;
+    if (quantity > holding.quantity) {
+      quantity = holding.quantity;
+    }
+    const proceeds = quantity * coin.price;
     const newCash = cash + proceeds;
     setCash(newCash);
+    const partSold = quantity / holding.quantity;
+    const quantityLeft = holding.quantity - quantity;
+    const costLeft = holding.cost - holding.cost * partSold;
 
     setHoldings((current) => {
-      // keep everything except the one we sold
       const updated: Holding[] = [];
       for (let i = 0; i < current.length; i++) {
         if (current[i].id !== holding.id) {
           updated.push(current[i]);
+        } else if (quantityLeft > 0.0000001) {
+          // sold some of it, keep the rest
+          updated.push({
+            id: current[i].id,
+            name: current[i].name,
+            quantity: quantityLeft,
+            cost: costLeft,
+          });
         }
       }
       return updated;
     });
 
     // save it
-    await deleteHolding(holding.id);
+    if (quantityLeft > 0.0000001) {
+      await updateHolding(holding.id, quantityLeft, costLeft);
+    } else {
+      await deleteHolding(holding.id);
+    }
     await saveCash(newCash);
   }
 
@@ -192,7 +223,17 @@ export default function TradePage() {
 
       <CoinSearchList coins={coins} selectedId={shownId} onSelect={setSelectedId} onBuy={buy} />
 
-      <Holdings holdings={holdings} coins={coins} onSell={sellAll} />
+      <div className="mt-10 flex items-center gap-2 text-sm">
+        <label className="text-muted">Sell amount $</label>
+        <input
+          type="number"
+          value={sellAmount}
+          onChange={(e) => setSellAmount(e.target.value)}
+          className="w-28 rounded border border-border bg-surface px-3 py-1 tabular-nums"
+        />
+      </div>
+
+      <Holdings holdings={holdings} coins={coins} onSell={sell} />
     </main>
   );
 }
