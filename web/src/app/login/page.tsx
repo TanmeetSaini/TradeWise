@@ -8,6 +8,11 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-12">
+      <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
+      <p className="mt-2 mb-8 text-sm text-muted">
+        An account saves your strategies and your paper trading portfolio
+      </p>
+
       <form className="space-y-4">
         {showName && (
           <div className="space-y-1">
