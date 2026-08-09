@@ -6,7 +6,6 @@
 using namespace std;
 using json = nlohmann::json;
 
-// average of the last few prices ending on this day
 double sma(const vector<double>& prices, int period, int day) {
   double sum = 0;
   for (int i = day - period + 1; i <= day; i++) {
@@ -15,7 +14,6 @@ double sma(const vector<double>& prices, int period, int day) {
   return sum / period;
 }
 
-// like sma but recent prices count for more
 double ema(const vector<double>& prices, int period, int day) {
   double smoothing = 2.0 / (period + 1);
   double sum = 0;
@@ -29,7 +27,6 @@ double ema(const vector<double>& prices, int period, int day) {
   return emaValue;
 }
 
-// compares gains to losses, comes out 0 to 100
 double rsi(const vector<double>& prices, int period, int day) {
   double gain = 0;
   double loss = 0;
@@ -109,7 +106,6 @@ class Strategy {
         }
       }
     } else {
-      // and/or group, build every rule inside it
       json rules = data["rules"];
       for (int i = 0; i < (int)rules.size(); i++) {
         node->children.push_back(buildHelperFunc(rules[i]));
@@ -176,7 +172,7 @@ class Strategy {
   //   }
   // }
 
-  // walk the tree to see if the strategy is true today
+  // traverse tree to see if the strategy is true today
   bool evaluateHelperFunc(Node* node, const vector<double>& prices, int day) {
     if (node == nullptr) {
       return false;
@@ -234,28 +230,66 @@ int main() {
   vector<double> prices = data["prices"];
   Strategy strategy(data["strategy"]);
 
+  double stopLoss = 0;
+  double takeProfit = 0;
+  if (data.contains("stop_loss")) {
+    stopLoss = data["stop_loss"];
+  }
+  if (data.contains("take_profit")) {
+    takeProfit = data["take_profit"];
+  }
+
   double fee = 0.001; // 0.1%, same as binance
-  double slippage = 0.0005; // 0.05%, you never get the exact price you see
-  // hold the coin while the strategy is true, sit in cash when it isn't
+  double slippage = 0.0005; // 0.05%
   double cash = 10000.0;
   double coins = 0;
   int trades = 0;
+  double peak = 10000.0;
+  double maxDrawdown = 0;
+  double entryPrice = 0;
+  bool blocked = false;
   for (int day = 0; day < (int)prices.size() - 1; day++) {
     bool signal = strategy.evaluate(prices, day);
     // cant buy at today's close since we only know it once the day is over
     double price = prices[day + 1];
-    if (signal && cash > 0) {
-      // pay a bit over the price and the fee comes out of our cash
+    // after being stopped, wait for the rules to go false before buying again
+    if (!signal) {
+      blocked = false;
+    }
+    bool forcedSell = false;
+    if (coins > 0) {
+      double changePct = (price - entryPrice) / entryPrice * 100.0;
+      if (stopLoss > 0 && changePct <= -stopLoss) {
+        forcedSell = true;
+      }
+      if (takeProfit > 0 && changePct >= takeProfit) {
+        forcedSell = true;
+      }
+    }
+    if (signal && cash > 0 && !blocked) {
+      // pay a bit over the price
       double buyPrice = price * (1 + slippage);
       coins = (cash * (1 - fee)) / buyPrice;
       cash = 0;
+      entryPrice = buyPrice;
       trades++;
-    } else if (!signal && coins > 0) {
-      // get a bit under the price and the fee comes off what we make
+    } else if (coins > 0 && (!signal || forcedSell)) {
+      // get a bit under the price
       double sellPrice = price * (1 - slippage);
       cash = coins * sellPrice * (1 - fee);
       coins = 0;
       trades++;
+      if (forcedSell) {
+        blocked = true;
+      }
+    }
+    double value = cash + coins * price;
+    if (value > peak) {
+      peak = value;
+    }
+    double drop = (peak - value) / peak * 100.0;
+    if (drop > maxDrawdown) {
+      maxDrawdown = drop;
     }
   }
 
@@ -271,6 +305,7 @@ int main() {
   result["final_value"] = finalValue;
   result["return_pct"] = returnPct;
   result["trades"] = trades;
+  result["max_drawdown_pct"] = maxDrawdown;
   result["hold_value"] = holdValue;
   result["hold_return_pct"] = holdReturnPct;
   cout << result.dump() << endl;
