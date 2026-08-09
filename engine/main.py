@@ -28,12 +28,19 @@ EVALUATOR = Path(__file__).parent / "cpp" / "evaluator"
 class BacktestRequest(BaseModel):
     prices: list[float]
     strategy: dict
+    stop_loss: float = 0
+    take_profit: float = 0
 
 
 @app.post("/backtest")
 def backtest(req: BacktestRequest):
     # send the prices and strategy
-    payload = json.dumps({"prices": req.prices, "strategy": req.strategy})
+    payload = json.dumps({
+        "prices": req.prices,
+        "strategy": req.strategy,
+        "stop_loss": req.stop_loss,
+        "take_profit": req.take_profit,
+    })
     proc = subprocess.run(
         [str(EVALUATOR)],
         input=payload,
