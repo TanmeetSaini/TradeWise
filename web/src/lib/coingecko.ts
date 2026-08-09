@@ -60,8 +60,7 @@ export async function getCoinOHLC(id: string, days: number): Promise<Candle[]> {
   return candles;
 }
 
-// daily closing prices for the backtest
-export async function getDailyPrices(id: string, days: number): Promise<number[]> {
+export async function getDailyPrices(id: string, days: number) {
   const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=${days}&interval=daily`;
   const response = await fetch(url, { headers, next: { revalidate: 60 } });
   if (!response.ok) {
@@ -69,9 +68,11 @@ export async function getDailyPrices(id: string, days: number): Promise<number[]
   }
   const data = await response.json();
   const rows: number[][] = data.prices;
+  const times: number[] = [];
   const prices: number[] = [];
   for (let i = 0; i < rows.length; i++) {
+    times.push(Math.floor(rows[i][0] / 1000)); // lightweight-charts wants whole seconds
     prices.push(rows[i][1]);
   }
-  return prices;
+  return { times: times, prices: prices };
 }
