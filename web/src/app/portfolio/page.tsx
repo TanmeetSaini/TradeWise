@@ -26,7 +26,12 @@ export default function PortfolioPage() {
       const data = await res.json();
       const list: MarketCoin[] = [];
       for (let i = 0; i < data.length; i++) {
-        list.push({ id: data[i].id, name: data[i].name, price: data[i].current_price });
+        list.push({
+          id: data[i].id,
+          symbol: data[i].symbol,
+          name: data[i].name,
+          price: data[i].current_price,
+        });
       }
       setCoins(list);
     }
