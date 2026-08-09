@@ -42,6 +42,7 @@ type BacktestResult = {
   trades: number;
   hold_value: number;
   hold_return_pct: number;
+  max_drawdown_pct: number;
 };
 
 // one saved row from the db, strategy is one rule or a group
@@ -61,6 +62,8 @@ export default function BacktestPage() {
   const [name, setName] = useState("");
   const [saved, setSaved] = useState(false);
   const [running, setRunning] = useState(false);
+  const [stopLoss, setStopLoss] = useState("0");
+  const [takeProfit, setTakeProfit] = useState("0");
   const [strategies, setStrategies] = useState<SavedStrategy[]>([]);
   const [result, setResult] = useState<BacktestResult | null>(null);
   const [rules, setRules] = useState<Rule[]>([
@@ -183,7 +186,12 @@ export default function BacktestPage() {
       const engineRes = await fetch(`${engineUrl}/backtest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prices: prices, strategy: strategy }),
+        body: JSON.stringify({
+          prices: prices,
+          strategy: strategy,
+          stop_loss: Number(stopLoss),
+          take_profit: Number(takeProfit),
+        }),
       });
       if (!engineRes.ok) {
         throw new Error("engine failed");
@@ -282,6 +290,24 @@ export default function BacktestPage() {
           <option value={90}>90 days</option>
           <option value={365}>1 year</option>
         </select>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-muted">Sell if the trade falls</span>
+        <input
+          type="number"
+          value={stopLoss}
+          onChange={(event) => setStopLoss(event.target.value)}
+          className="w-16 rounded border border-border bg-surface px-3 py-1 tabular-nums"
+        />
+        <span className="text-muted">% or gains</span>
+        <input
+          type="number"
+          value={takeProfit}
+          onChange={(event) => setTakeProfit(event.target.value)}
+          className="w-16 rounded border border-border bg-surface px-3 py-1 tabular-nums"
+        />
+        <span className="text-muted">% (0 for neither)</span>
       </div>
 
       <h2 className="mt-10 text-sm font-medium uppercase tracking-wide text-muted">Strategy</h2>
@@ -466,6 +492,12 @@ export default function BacktestPage() {
           </p>
           <p className="mt-1 text-sm text-muted">
             {result.trades} trades, after 0.1% fees and 0.05% slippage
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            Worst drop along the way{" "}
+            <span className="tabular-nums text-down">
+              -{result.max_drawdown_pct.toFixed(2)}%
+            </span>
           </p>
           <p className="mt-1 text-sm text-muted">
             Buy and hold would have returned{" "}
