@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { saveStrategy, getStrategies, deleteStrategy } from "./actions";
+import EquityChart from "./equity-chart";
 
 // one row in the form
 type Rule = {
@@ -43,6 +44,8 @@ type BacktestResult = {
   hold_value: number;
   hold_return_pct: number;
   max_drawdown_pct: number;
+  values: number[];
+  hold_values: number[];
 };
 
 // one saved row from the db, strategy is one rule or a group
@@ -66,6 +69,7 @@ export default function BacktestPage() {
   const [takeProfit, setTakeProfit] = useState("0");
   const [strategies, setStrategies] = useState<SavedStrategy[]>([]);
   const [result, setResult] = useState<BacktestResult | null>(null);
+  const [times, setTimes] = useState<number[]>([]);
   const [rules, setRules] = useState<Rule[]>([
     { indicator: "price", period: "20", operator: ">", value: "60000", band: "lower", multiplier: "2" },
   ]);
@@ -180,14 +184,15 @@ export default function BacktestPage() {
     setRunning(true);
     try {
       const res = await fetch(`/api/prices?id=${coin}&days=${days}`);
-      const prices = await res.json();
+      const priceData = await res.json();
+      setTimes(priceData.times);
       const engineUrl = process.env.NEXT_PUBLIC_ENGINE_URL || "http://localhost:8000";
       // send prices and strategy to engine
       const engineRes = await fetch(`${engineUrl}/backtest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prices: prices,
+          prices: priceData.prices,
           strategy: strategy,
           stop_loss: Number(stopLoss),
           take_profit: Number(takeProfit),
@@ -266,6 +271,9 @@ export default function BacktestPage() {
     <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-12">
       <h1 className="text-2xl font-semibold tracking-tight">Backtest</h1>
       <p className="mt-2 text-muted">Build a strategy and test it on past prices.</p>
+
+      <div className="grid gap-10 lg:grid-cols-2">
+      <div>
 
       <div className="mt-8 flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted">Test</span>
@@ -477,11 +485,34 @@ export default function BacktestPage() {
         {saved && <span className="text-sm text-muted">Saved</span>}
       </div>
 
-      {running && <p className="mt-3 text-sm text-muted">Running backtest...</p>}
+      </div>
+      <div className="lg:pt-8">
+
+      {running && <p className="text-sm text-muted">Running backtest...</p>}
+
+      {!result && !running && (
+        <p className="text-sm text-muted">Run a backtest to see how it would have gone.</p>
+      )}
 
       {result && (
-        <div className="mt-6">
-          <p className="text-2xl font-semibold tabular-nums">${result.final_value.toFixed(2)}</p>
+        <div>
+          <EquityChart
+            times={times}
+            values={result.values}
+            holdValues={result.hold_values}
+          />
+          <p className="mt-3 text-xs text-muted">
+            Green is the strategy, grey is buying and holding. Charts by{" "}
+            <a
+              href="https://www.tradingview.com"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-foreground"
+            >
+              TradingView
+            </a>
+          </p>
+          <p className="mt-6 text-2xl font-semibold tabular-nums">${result.final_value.toFixed(2)}</p>
           <p className="mt-1 text-sm text-muted">
             Return{" "}
             <span className={result.return_pct >= 0 ? "text-up" : "text-down"}>
@@ -513,6 +544,9 @@ export default function BacktestPage() {
           </p>
         </div>
       )}
+
+      </div>
+      </div>
 
       {strategies.length > 0 && (
         <div className="mt-12">
