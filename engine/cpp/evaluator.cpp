@@ -6,105 +6,67 @@
 using namespace std;
 using json = nlohmann::json;
 
-// average of the last few prices for every day, using a running sum
-vector<double> smaSeries(const vector<double>& prices, int period) {
-  vector<double> values(prices.size(), 0);
+// average of the last few prices ending on this day
+double sma(const vector<double>& prices, int period, int day) {
   double sum = 0;
-  for (int i = 0; i < (int)prices.size(); i++) {
+  for (int i = day - period + 1; i <= day; i++) {
     sum += prices[i];
-    if (i >= period) {
-      sum -= prices[i - period];
-    }
-    if (i >= period - 1) {
-      values[i] = sum / period;
-    }
   }
-  return values;
+  return sum / period;
 }
 
-vector<double> emaSeries(const vector<double>& prices, int period) {
-  vector<double> values(prices.size(), 0);
-  if ((int)prices.size() < period) {
-    return values;
-  }
+// like sma but recent prices count for more
+double ema(const vector<double>& prices, int period, int day) {
   double smoothing = 2.0 / (period + 1);
   double sum = 0;
   for (int i = 0; i < period; i++) {
     sum += prices[i];
   }
   double emaValue = sum / period;
-  values[period - 1] = emaValue;
-  for (int i = period; i < (int)prices.size(); i++) {
+  for (int i = period; i <= day; i++) {
     emaValue = prices[i] * smoothing + emaValue * (1 - smoothing);
-    values[i] = emaValue;
   }
-  return values;
+  return emaValue;
 }
 
-vector<double> rsiSeries(const vector<double>& prices, int period) {
-  vector<double> values(prices.size(), 0);
+// compares gains to losses, comes out 0 to 100
+double rsi(const vector<double>& prices, int period, int day) {
   double gain = 0;
   double loss = 0;
-  for (int i = 1; i < (int)prices.size(); i++) {
+  for (int i = day - period + 1; i <= day; i++) {
     double change = prices[i] - prices[i - 1];
     if (change > 0) {
       gain += change;
     } else {
       loss += -change;
     }
-    if (i > period) {
-      double oldChange = prices[i - period] - prices[i - period - 1];
-      if (oldChange > 0) {
-        gain -= oldChange;
-      } else {
-        loss -= -oldChange;
-      }
-    }
-    if (i >= period) {
-      double averageGain = gain / period;
-      double averageLoss = loss / period;
-      if (averageLoss == 0) {
-        values[i] = 100.0;
-      } else {
-        double relativeStrength = averageGain / averageLoss;
-        values[i] = 100.0 - 100.0 / (1 + relativeStrength);
-      }
-    }
   }
-  return values;
+  double averageGain = gain / period;
+  double averageLoss = loss / period;
+  if (averageLoss == 0) {
+    return 100.0;
+  }
+  double relativeStrength = averageGain / averageLoss;
+  return 100.0 - 100.0 / (1 + relativeStrength);
 }
 
-// the sum of squares gives us the spread without a second loop
-vector<double> bollingerSeries(const vector<double>& prices, int period, const string& band, double multiplier) {
-  vector<double> values(prices.size(), 0);
-  double sum = 0;
-  double sumOfSquares = 0;
-  for (int i = 0; i < (int)prices.size(); i++) {
-    sum += prices[i];
-    sumOfSquares += prices[i] * prices[i];
-    if (i >= period) {
-      sum -= prices[i - period];
-      sumOfSquares -= prices[i - period] * prices[i - period];
-    }
-    if (i >= period - 1) {
-      double mean = sum / period;
-      if (band == "middle") {
-        values[i] = mean;
-      } else {
-        double variance = sumOfSquares / period - mean * mean;
-        if (variance < 0) {
-          variance = 0;
-        }
-        double standardDeviation = sqrt(variance);
-        if (band == "upper") {
-          values[i] = mean + multiplier * standardDeviation;
-        } else {
-          values[i] = mean - multiplier * standardDeviation;
-        }
-      }
-    }
+// upper, middle or lower bollinger band
+double bollinger(const vector<double>& prices, int period, const string& band,
+                 double multiplier, int day) {
+  double mean = sma(prices, period, day);
+  if (band == "middle") {
+    return mean;
   }
-  return values;
+  double sumOfSquares = 0;
+  for (int i = day - period + 1; i <= day; i++) {
+    double difference = prices[i] - mean;
+    sumOfSquares += difference * difference;
+  }
+  double standardDeviation = sqrt(sumOfSquares / period);
+  if (band == "upper") {
+    return mean + multiplier * standardDeviation;
+  }
+  return mean - multiplier * standardDeviation;
 }
 
 // holds the strategy as a tree and checks it day by day
@@ -119,15 +81,12 @@ class Strategy {
     int period;
     double multiplier;
     vector<Node*> children;  // rules inside an and/or group
-    vector<double> values;   // the indicator value for each day
-    int startDay;            // first day it has enough history
 
     Node(string nodeType) {
       type = nodeType;
       value = 0;
       period = 0;
       multiplier = 0;
-      startDay = 0;
     }
   };
 
@@ -159,45 +118,14 @@ class Strategy {
     return node;
   }
 
-  // work out each indicator once instead of redoing it every day
-  void prepareHelperFunc(Node* node, const vector<double>& prices) {
-    if (node == nullptr) {
-      return;
-    }
-    if (node->type == "rule") {
-      if (node->indicator != "price" &&
-          (node->period <= 0 || node->period > (int)prices.size())) {
-        node->startDay = (int)prices.size();
-        return;
-      }
-      if (node->indicator == "sma") {
-        node->values = smaSeries(prices, node->period);
-        node->startDay = node->period - 1;
-      } else if (node->indicator == "ema") {
-        node->values = emaSeries(prices, node->period);
-        node->startDay = node->period - 1;
-      } else if (node->indicator == "rsi") {
-        node->values = rsiSeries(prices, node->period);
-        node->startDay = node->period;
-      } else if (node->indicator == "bollinger") {
-        node->values =
-            bollingerSeries(prices, node->period, node->band, node->multiplier);
-        node->startDay = node->period - 1;
-      }
-      return;
-    }
-    for (int i = 0; i < (int)node->children.size(); i++) {
-      prepareHelperFunc(node->children[i], prices);
-    }
-  }
-
   bool checkRule(Node* node, const vector<double>& prices, int day) {
     if (node->indicator == "bollinger") {
       // not enough days, rule cant be true
-      if (day < node->startDay) {
+      if (day < node->period - 1) {
         return false;
       }
-      double bandValue = node->values[day];
+      double bandValue =
+          bollinger(prices, node->period, node->band, node->multiplier, day);
       double price = prices[day];
       if (node->op == ">") {
         return price > bandValue;
@@ -208,11 +136,22 @@ class Strategy {
     double indicatorValue;
     if (node->indicator == "price") {
       indicatorValue = prices[day];
-    } else {
-      if (day < node->startDay) {
+    } else if (node->indicator == "sma") {
+      if (day < node->period - 1) {
         return false;
       }
-      indicatorValue = node->values[day];
+      indicatorValue = sma(prices, node->period, day);
+    } else if (node->indicator == "ema") {
+      if (day < node->period - 1) {
+        return false;
+      }
+      indicatorValue = ema(prices, node->period, day);
+    } else {
+      // only rsi left
+      if (day < node->period) {
+        return false;
+      }
+      indicatorValue = rsi(prices, node->period, day);
     }
 
     if (node->op == ">") {
@@ -280,9 +219,6 @@ class Strategy {
   ~Strategy() {
     clearHelperFunc(root);
   }
-  void prepare(const vector<double>& prices) {
-    prepareHelperFunc(root, prices);
-  }
   bool evaluate(const vector<double>& prices, int day) {
     return evaluateHelperFunc(root, prices, day);
   }
@@ -297,7 +233,6 @@ int main() {
   json data = json::parse(input);
   vector<double> prices = data["prices"];
   Strategy strategy(data["strategy"]);
-  strategy.prepare(prices);
 
   double fee = 0.001; // 0.1%, same as binance
   double slippage = 0.0005; // 0.05%, you never get the exact price you see
