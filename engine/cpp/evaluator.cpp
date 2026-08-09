@@ -248,6 +248,12 @@ int main() {
   double maxDrawdown = 0;
   double entryPrice = 0;
   bool blocked = false;
+  // buy on day one and hold, so we have something to compare against
+  double holdBuyPrice = prices[0] * (1 + slippage);
+  double holdCoins = (10000.0 * (1 - fee)) / holdBuyPrice;
+  // what the account is worth each day, for the chart
+  vector<double> values;
+  vector<double> holdValues;
   for (int day = 0; day < (int)prices.size() - 1; day++) {
     bool signal = strategy.evaluate(prices, day);
     // cant buy at today's close since we only know it once the day is over
@@ -284,6 +290,8 @@ int main() {
       }
     }
     double value = cash + coins * price;
+    values.push_back(value);
+    holdValues.push_back(holdCoins * price);
     if (value > peak) {
       peak = value;
     }
@@ -296,8 +304,6 @@ int main() {
   double lastPrice = prices[prices.size() - 1];
   double finalValue = cash + coins * lastPrice;
   double returnPct = (finalValue - 10000.0) / 10000.0 * 100.0;
-  double holdBuyPrice = prices[0] * (1 + slippage);
-  double holdCoins = (10000.0 * (1 - fee)) / holdBuyPrice;
   double holdValue = holdCoins * lastPrice;
   double holdReturnPct = (holdValue - 10000.0) / 10000.0 * 100.0;
 
@@ -308,6 +314,8 @@ int main() {
   result["max_drawdown_pct"] = maxDrawdown;
   result["hold_value"] = holdValue;
   result["hold_return_pct"] = holdReturnPct;
+  result["values"] = values;
+  result["hold_values"] = holdValues;
   cout << result.dump() << endl;
   return 0;
 }
