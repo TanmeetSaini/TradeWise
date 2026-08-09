@@ -18,6 +18,8 @@ lets users manually trade with live prices on a simulated portfolio.
 - Join rules with AND/OR
 - Backtest over 30 days, 90 days or a year of CoinGecko data
 - Every result is compared against buy-and-hold
+- Optional stop-loss and take-profit on a backtest
+- Every result shows the worst drop along the way
 - Paper trading with a simulated $10,000 account, searching across the top 250 coins
 - Markets table with price, 24h change, market cap, volume and a 7 day sparkline,
   refetched every 30 seconds
