@@ -16,6 +16,7 @@ import {
 // a coin we can buy and its price
 export type MarketCoin = {
   id: string;
+  symbol: string;
   name: string;
   price: number;
 };
@@ -42,13 +43,84 @@ export default function TradePage() {
       const data: Coin[] = await res.json();
       const list: MarketCoin[] = [];
       for (let i = 0; i < data.length; i++) {
-        list.push({ id: data[i].id, name: data[i].name, price: data[i].current_price });
+        list.push({
+          id: data[i].id,
+          symbol: data[i].symbol,
+          name: data[i].name,
+          price: data[i].current_price,
+        });
       }
       setCoins(list);
     }
     loadCoins();
     const timer = setInterval(loadCoins, 30000);
     return () => clearInterval(timer);
+  }, []);
+
+  // live prices from coinbase, 30 second refresh still covers rest
+  useEffect(() => {
+    let socket: WebSocket | null = null;
+    let stopped = false;
+    async function connect() {
+      const res = await fetch("/api/markets");
+      const data: Coin[] = await res.json();
+      const wanted = [];
+      for (let i = 0; i < data.length; i++) {
+        wanted.push(data[i].symbol.toUpperCase() + "-USD");
+      }
+      const productsRes = await fetch("https://api.exchange.coinbase.com/products");
+      const products = await productsRes.json();
+      const available: string[] = [];
+      for (let i = 0; i < products.length; i++) {
+        if (products[i].status === "online" && wanted.includes(products[i].id)) {
+          available.push(products[i].id);
+        }
+      }
+      if (stopped) {
+        return;
+      }
+      socket = new WebSocket("wss://ws-feed.exchange.coinbase.com");
+      socket.onopen = () => {
+        socket?.send(
+          JSON.stringify({
+            type: "subscribe",
+            product_ids: available,
+            channels: ["ticker"],
+          })
+        );
+      };
+      socket.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.type !== "ticker") {
+          return;
+        }
+        const symbol = message.product_id.replace("-USD", "").toLowerCase();
+        const newPrice = Number(message.price);
+        setCoins((current) => {
+          const updated: MarketCoin[] = [];
+          for (let i = 0; i < current.length; i++) {
+            if (current[i].symbol === symbol) {
+              updated.push({
+                id: current[i].id,
+                symbol: current[i].symbol,
+                name: current[i].name,
+                price: newPrice,
+              });
+            } else {
+              updated.push(current[i]);
+            }
+          }
+          return updated;
+        });
+      };
+    }
+    connect();
+    return () => {
+      stopped = true;
+      if (socket) {
+        socket.close();
+      }
+    };
   }, []);
 
   // grab our saved cash and coins when the page opens
