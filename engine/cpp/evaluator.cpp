@@ -27,10 +27,11 @@ double ema(const vector<double>& prices, int period, int day) {
   return emaValue;
 }
 
+// rsi using wilder's smoothing
 double rsi(const vector<double>& prices, int period, int day) {
   double gain = 0;
   double loss = 0;
-  for (int i = day - period + 1; i <= day; i++) {
+  for (int i = 1; i <= period; i++) {
     double change = prices[i] - prices[i - 1];
     if (change > 0) {
       gain += change;
@@ -40,6 +41,18 @@ double rsi(const vector<double>& prices, int period, int day) {
   }
   double averageGain = gain / period;
   double averageLoss = loss / period;
+  for (int i = period + 1; i <= day; i++) {
+    double change = prices[i] - prices[i - 1];
+    double up = 0;
+    double down = 0;
+    if (change > 0) {
+      up = change;
+    } else {
+      down = -change;
+    }
+    averageGain = (averageGain * (period - 1) + up) / period;
+    averageLoss = (averageLoss * (period - 1) + down) / period;
+  }
   if (averageLoss == 0) {
     return 100.0;
   }
